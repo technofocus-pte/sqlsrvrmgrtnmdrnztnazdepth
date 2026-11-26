@@ -1028,8 +1028,6 @@ az cognitiveservices account list-deleted -o table
 az cognitiveservices account purge -l eastus -g ResourceGroup1 -n aif-zava-67029880   # use your resource name
 ```
 
-   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image31.png)
-
    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image32.png)
 
 If you used a shared Foundry resource from your instructor instead of creating your own, ask them to remove your server’s role assignment from it.
