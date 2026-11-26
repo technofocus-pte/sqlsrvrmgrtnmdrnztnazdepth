@@ -45,11 +45,6 @@ from General Purpose.
 
 ### **Task 1: Create the Hyperscale database**
 
-1.  Open [***portal.azure.com***](https://portal.azure.com/) and sign in
-    with your lab account.
-
-    ![](./media/image1.png)
-
 2.  In the portal search bar, type +++SQL databases+++. Under
     **Services**, select **Azure SQL Database**.
 
