@@ -173,10 +173,11 @@ You create ZavaOrders on the local SQL Server with 1,000 customers and 20,000 or
 1. Run:
 
     ```
-    Get-Service | Where-Object { $\_.Name -like 'MSSQL\*' } | Format-Table
-    Name, Status -AutoSize
+   Get-Service | Where-Object { $\_.Name -like 'MSSQL\*' } | Format-Table Name, Status -AutoSize
+   ```
 
-    sqlcmd -S $src -E -C -Q "SELECT @@SERVERNAME AS ServerName,
+    ```
+   sqlcmd -S $src -E -C -Q "SELECT @@SERVERNAME AS ServerName,
     SERVERPROPERTY('ProductVersion') AS Version,
     IS_SRVROLEMEMBER('sysadmin') AS IsSysadmin;"
     ```
