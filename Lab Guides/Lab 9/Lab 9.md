@@ -91,7 +91,6 @@ This is the first lab in the series, so you create everything it needs yourself.
     - Set **Max vCores** to **2**.
     - Set **Auto-pause delay** to **1 hour**.
 
-
 1. Click **Apply**.
 
     ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image46.png)
@@ -111,7 +110,6 @@ This is the first lab in the series, so you create everything it needs yourself.
     - **Add current client IP address:** Yes
 
     ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image49.png)
-
 
 1. Click the **Security** tab.
 
@@ -184,7 +182,197 @@ Azure SQL blocks all public connections until a firewall rule allows them. In th
 
     ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image63.png)
 
-### Task 3: Connect to the database
+### Task 3: Grant the server identity access to the model
+
+1. In the logical server’s left menu, click **Security > Identity**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image35.png)
+
+1. Under **System assigned managed identity**, set **Status** to **On**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image36.png)
+
+1. Click **Save**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image37.png)
+
+1. Confirm that **Status** is **On** and that **Save** is greyed out, which means the change is saved.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image38.png)
+
+### Task 4: Set the Microsoft Entra administrator
+
+1. On the logical server’s left menu, click **Settings > Microsoft Entra ID**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image73.png)
+
+1. Click **Set admin**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image74.png)
+
+1. In the search box, search for your lab account.
+
+1. Select your lab account.
+
+1. Click **Select**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image75.png)
+
+1. Leave **Support only Microsoft Entra authentication for this server** cleared for now.
+
+1. Click **Save**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image76.png)
+
+
+### Task 5: Create the SQL-Analysts group
+
+You will grant database access to an Entra group rather than to individual people. Check whether the group exists, and create it if not.
+
+1. In the portal search bar, type `Microsoft Entra ID`.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image77.png)
+
+1. Under **Services**, select **Microsoft Entra ID**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image78.png)
+
+1. In the left menu, click **Manage > Groups**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image79.png)
+
+1. Search for `SQL-Analysts`.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image80.png)
+
+1. If the group exists, note its exact name and go to Task 3. Otherwise, continue with the next step.
+
+1. Click **+ New group**.
+
+1. Set the following values:
+
+    - **Group type:** Security
+    - **Group name:** `SQL-Analysts`
+    - **Membership type:** Assigned
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image81.png)
+
+1. Under **Members**, click **No members selected**.
+
+1. Search for and select your lab account.
+
+1. Click **Select**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image82.png)
+
+1. Click **Create**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image83.png)
+
+1. Wait about one minute for the group to be created before you continue.
+
+    **If you cannot create groups:** Some lab tenants do not allow learners to create groups (**+ New group** is greyed out or fails). Ask your instructor to create the group or to give you another lab user’s email address. In Task 4, replace **[SQL-Analysts]** with **[*{that user’s email}*]**. The user then appears as **EXTERNAL_USER** instead of **EXTERNAL_GROUP**.
+
+## Setup: Connect the Database to Azure OpenAI
+
+**Values used in this lab:** server **sql-zava-jd427**, database **sqldb-zava** and resource group **ResourceGroup1** (all from Lab 9), and your Foundry resource **aif-zava-<lab-user-number>** (Task 0). Wherever a script shows **<lab-user-number>**, replace it, including the angle brackets, with your lab user number.
+
+### Task 1: Create the Foundry resource and deploy the embedding model
+
+Each learner needs a Microsoft Foundry resource in the lab resource group. Resource names must be unique across Azure, so include your **lab user number**: the digits in your sign-in name (for example, User1-67029880 gives `aif-zava-@lab.labinstance.id`). If your instructor provides a resource instead, skip this task and use that name wherever this guide shows `aif-zava-@lab.labinstance.id`.
+
+1. In the Azure portal, click **Foundry** under **Azure services**.
+
+   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image1.png)
+
+1. Click **Create a Foundry resource**.
+
+   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image2.png)
+
+1. Set **Resource group** to **@lab.CloudResourceGroup(ResourceGroup1).Name**, **Name** to **aif-zava-@lab.labinstance.id** and **Region** to the server’s region (**@lab.CloudResourceGroup(ResourceGroup1).Location**). If asked for a default project name, use `proj-zava-@lab.labinstance.id`.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image3.png)
+
+1. If the portal reports that the sub-domain name is already used, add a digit (for example `aif-zava-670298801`). Note the exact name: every later step uses it.
+
+1. Click **Review + create**.
+
+   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image4.png)
+
+1. Click **Create**.
+
+   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image5.png)
+
+1. Click the **Cloud Shell** icon (`>_`) at the top of the portal, choose **Bash**, and run the commands below to deploy the embedding model. Capacity 50 (50,000 tokens per minute) lets the load in Exercise 2 run without throttling.
+
+
+```bash
+# Replace the example name on the AOAI_NAME line with your Foundry resource name
+RG=ResourceGroup1
+AOAI_NAME=aif-zava-@lab.LabInstance.Id
+
+az cognitiveservices account deployment create -g $RG -n $AOAI_NAME \
+  --deployment-name text-embedding-3-small \
+  --model-name text-embedding-3-small --model-version 1 --model-format OpenAI \
+  --sku-name GlobalStandard --sku-capacity 50
+
+az cognitiveservices account deployment list -g $RG -n $AOAI_NAME \
+  --query "[].{deployment:name, model:properties.model.name, state:properties.provisioningState}" -o table
+```
+
+**Expected result:** one row, **text-embedding-3-small | text-embedding-3-small | Succeeded**. The deployment name must be exactly **text-embedding-3-small**. If you get a quota error, use `--sku-capacity 30`. Cloud Shell may warn that the subscription is not registered to Microsoft.CloudShell; you can ignore it.
+
+**Portal alternative:** open the resource, click **Go to Foundry portal**, then **Models + endpoints > + Deploy model > Deploy base model**. Choose **text-embedding-3-small**, keep the deployment name exactly `text-embedding-3-small`, and set the rate limit to 50K tokens per minute.
+
+1. In the Azure portal, open your Foundry resource **aif-zava-@lab.labinstance.id**: type its name in the top search bar and select it under **Resources** (or go to **Foundry > All resources**). Do not use the Microsoft Foundry overview page; IAM is only on the resource itself.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image6.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image7.png)   
+
+1. Select **Access control (IAM) > + Add > Add role assignment**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image8.png)
+
+1. Search for +++Cognitive Services OpenAI User+++, then select **Cognitive Services OpenAI User**. Click **Next**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image9.png)
+
+1. Select **Managed identity**, click **+ Select members**, set **Managed identity** to **SQL server**, select **sql-zava-@lab.labinstance.id**, click **Select**, then click **Review + assign** twice. Do not choose Foundry or Foundry project.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image10.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image11.png)
+
+1. Confirm the assignment: on the **Role assignments** tab, click **Refresh** and search for `sql-zava-@lab.labinstance.id`. It must be listed under **Cognitive Services OpenAI User** with type **SQL server**. Wait about 5 minutes before Task 2.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image12.png)
+
+
+**CLI alternative (Cloud Shell, Bash). In Bash, never leave <…> placeholders: < is read as a file redirect.**
+
+```bash
+# Replace the example Foundry name with your own before running
+RG=ResourceGroup1
+SERVER=sql-zava-@lab.labinstance.id
+AOAI_NAME=aif-zava-@lab.labinstance.id
+
+az sql server update -g $RG -n $SERVER -i   # turns on the identity; no change if already on
+
+SQL_MI=$(az sql server show -g $RG -n $SERVER --query identity.principalId -o tsv)
+AOAI_ID=$(az cognitiveservices account show -g $RG -n $AOAI_NAME --query id -o tsv)
+echo "SQL identity: $SQL_MI"; echo "Foundry resource: $AOAI_ID"
+
+az role assignment create --assignee-object-id $SQL_MI 
+  --assignee-principal-type ServicePrincipal 
+  --role "Cognitive Services OpenAI User" --scope $AOAI_ID
+
+az role assignment list --assignee $SQL_MI --scope $AOAI_ID -o table
+```
+
+**Outbound access:** on the server’s **Security > Networking > Connectivity** tab, confirm that **Outbound networking** shows **Restrictions disabled**; no change is needed. Only if restrictions are enabled, open **Configure outbound networking restrictions** and add **aif-zava-*{lab-user-number}*.openai.azure.com**, or every model call fails.
+
+### Task 2: Connect to the database
 
 Use **Option A** if SSMS is installed on your lab machine; otherwise, use **Option B**. Later steps say “in your query window”; this means the tool you chose.
 
@@ -227,125 +415,7 @@ Use **Option A** if SSMS is installed on your lab machine; otherwise, use **Opti
 
     ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image71.png)
 
-
-## Setup: Connect the Database to Azure OpenAI
-
-**Values used in this lab:** server **sql-zava-jd427**, database **sqldb-zava** and resource group **ResourceGroup1** (all from Lab 9), and your Foundry resource **aif-zava-<lab-user-number>** (Task 0). Wherever a script shows **<lab-user-number>**, replace it, including the angle brackets, with your lab user number.
-
-### Task 0: Create the Foundry resource and deploy the embedding model
-
-Each learner needs a Microsoft Foundry resource in the lab resource group. Resource names must be unique across Azure, so include your **lab user number**: the digits in your sign-in name (for example, User1-67029880 gives `aif-zava-@lab.labinstance.id`). If your instructor provides a resource instead, skip this task and use that name wherever this guide shows `aif-zava-@lab.labinstance.id`.
-
-1. In the Azure portal, click **Foundry** under **Azure services**.
-
-   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image1.png)
-
-1. Click **Create a Foundry resource**.
-
-   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image2.png)
-
-1. Set **Resource group** to **@lab.CloudResourceGroup(ResourceGroup1).Name**, **Name** to **aif-zava-@lab.labinstance.id** and **Region** to the server’s region (**@lab.CloudResourceGroup(ResourceGroup1).Location**). If asked for a default project name, use `proj-zava-@lab.labinstance.id`.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image3.png)
-
-1. If the portal reports that the sub-domain name is already used, add a digit (for example `aif-zava-670298801`). Note the exact name: every later step uses it.
-
-1. Click **Review + create**.
-
-   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image4.png)
-
-1. Click **Create**.
-
-   ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image5.png)
-
-1. Click the **Cloud Shell** icon (`>_`) at the top of the portal, choose **Bash**, and run the commands below to deploy the embedding model. Capacity 50 (50,000 tokens per minute) lets the load in Exercise 2 run without throttling.
-
-
-```bash
-# Replace the example name on the AOAI_NAME line with your Foundry resource name
-RG=ResourceGroup1
-AOAI_NAME=aif-zava-67029880
-
-az cognitiveservices account deployment create -g $RG -n $AOAI_NAME 
-  --deployment-name text-embedding-3-small 
-  --model-name text-embedding-3-small --model-version 1 --model-format OpenAI 
-  --sku-name GlobalStandard --sku-capacity 50
-
-az cognitiveservices account deployment list -g $RG -n $AOAI_NAME 
-  --query "[].{deployment:name, model:properties.model.name, state:properties.provisioningState}" -o table
-```
-
-**Expected result:** one row, **text-embedding-3-small | text-embedding-3-small | Succeeded**. The deployment name must be exactly **text-embedding-3-small**. If you get a quota error, use `--sku-capacity 30`. Cloud Shell may warn that the subscription is not registered to Microsoft.CloudShell; you can ignore it.
-
-**Portal alternative:** open the resource, click **Go to Foundry portal**, then **Models + endpoints > + Deploy model > Deploy base model**. Choose **text-embedding-3-small**, keep the deployment name exactly `text-embedding-3-small`, and set the rate limit to 50K tokens per minute.
-
-### Task 1: Grant the server identity access to the model
-
-1. In the logical server’s left menu, click **Security > Identity**.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image35.png)
-
-1. Under **System assigned managed identity**, set **Status** to **On**.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image36.png)
-
-1. Click **Save**.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image37.png)
-
-1. Confirm that **Status** is **On** and that **Save** is greyed out, which means the change is saved.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image38.png)
-
-1. In the Azure portal, open your Foundry resource **aif-zava-@lab.labinstance.id**: type its name in the top search bar and select it under **Resources** (or go to **Foundry > All resources**). Do not use the Microsoft Foundry overview page; IAM is only on the resource itself.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image6.png)
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image7.png)   
-
-1. Select **Access control (IAM) > + Add > Add role assignment**.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image8.png)
-
-1. Select **Cognitive Services OpenAI User**, then **Next**.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image9.png)
-
-1. Select **Managed identity**, click **+ Select members**, set **Managed identity** to **SQL server**, select **sql-zava-@lab.labinstance.id**, click **Select**, then click **Review + assign** twice. Do not choose Foundry or Foundry project.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image10.png)
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image11.png)
-
-1. Confirm the assignment: on the **Role assignments** tab, click **Refresh** and search for `sql-zava-@lab.labinstance.id`. It must be listed under **Cognitive Services OpenAI User** with type **SQL server**. Wait about 5 minutes before Task 2.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image12.png)
-
-
-**CLI alternative (Cloud Shell, Bash). In Bash, never leave <…> placeholders: < is read as a file redirect.**
-
-```bash
-# Replace the example Foundry name with your own before running
-RG=ResourceGroup1
-SERVER=sql-zava-@lab.labinstance.id
-AOAI_NAME=aif-zava-@lab.labinstance.id
-
-az sql server update -g $RG -n $SERVER -i   # turns on the identity; no change if already on
-
-SQL_MI=$(az sql server show -g $RG -n $SERVER --query identity.principalId -o tsv)
-AOAI_ID=$(az cognitiveservices account show -g $RG -n $AOAI_NAME --query id -o tsv)
-echo "SQL identity: $SQL_MI"; echo "Foundry resource: $AOAI_ID"
-
-az role assignment create --assignee-object-id $SQL_MI 
-  --assignee-principal-type ServicePrincipal 
-  --role "Cognitive Services OpenAI User" --scope $AOAI_ID
-
-az role assignment list --assignee $SQL_MI --scope $AOAI_ID -o table
-```
-
-**Outbound access:** on the server’s **Security > Networking > Connectivity** tab, confirm that **Outbound networking** shows **Restrictions disabled**; no change is needed. Only if restrictions are enabled, open **Configure outbound networking restrictions** and add **aif-zava-*{lab-user-number}*.openai.azure.com**, or every model call fails.
-
-### Task 2: Create the credential, external model and embedding procedure
+### Task 3: Create the credential, external model and embedding procedure
 
 **CREATE EXTERNAL MODEL** stores the endpoint, credential and model as one database object, and **AI_GENERATE_EMBEDDINGS** calls it from any query. This replaces hand-written REST calls and JSON parsing.
 
@@ -455,7 +525,7 @@ CREATE TABLE dbo.ProductEmbeddings (
 - **Stored source text:** **Description** records exactly what was embedded, so re-embedding after a model change is reproducible.
 - **Relational columns alongside the vector:** **Category** and **ListPrice** allow filtering before ranking.
 
-**[IMAGE]**
+![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%209/media/image72.png)
 
 ### Task 3: Insert source records
 
@@ -769,14 +839,13 @@ BEGIN
     FROM vec v
     FULL OUTER JOIN kw w ON w.ProductID = v.ProductID
     JOIN dbo.ProductEmbeddings p ON p.ProductID = COALESCE(v.ProductID, w.ProductID)
-    ORDER BY rrf_score DESC;
+    ORDER BY rrf_score DESC, p.ProductName;
 END;
 GO
 
 GRANT EXECUTE ON dbo.hybrid_search TO AiSearchUsers;
 GO
 
-EXEC dbo.hybrid_search N'Road-650 Red 52';
 EXEC dbo.hybrid_search N'keep my hands warm on cold rides';
 
 -- Governed access: the app can search but cannot read the table directly
@@ -794,6 +863,9 @@ END CATCH;
 REVERT;
 
 SELECT USER_NAME() AS [who_am_i];   -- should be dbo again
+
+-- Final check: this result is shown in the Results pane
+EXEC dbo.hybrid_search N'Road-650 Red 52';
 ```
 
 Compare **vector_rank** and **keyword_rank**: exact-model queries are led by keyword matches, conceptual queries by vector matches.
