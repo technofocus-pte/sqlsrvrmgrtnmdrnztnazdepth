@@ -267,7 +267,7 @@ Lab 4.
 
 #### **Task 1: Create the SQL virtual machine (Wave 3)**
 
-1.  In the top search bar, type **Azure SQL** and select **Azure SQL**
+1.  In the top search bar, type +++Azure SQL+++ and select **Azure SQL**
     under **Services**.
 
 > ![A screenshot of a computer Description automatically
@@ -536,7 +536,7 @@ which pauses when idle.
 
 #### **Task 1: Create the logical server and ReportingDB (Wave 1)**
 
-1.  In the portal search bar, type **SQL database** in the portal search
+1.  In the portal search bar, type +++SQL database+++ in the portal search
     bar and select **Azure** **SQL database** under **Services**.
 
 > ![A screenshot of a computer Description automatically
@@ -548,17 +548,17 @@ which pauses when idle.
 > generated](./media/image50.png)
 
 3.  On the **Basics** tab, set **Resource group** to **ResourceGroup1**
-    and **Database name** to **ReportingDB**. Under **Server**, click
+    and **Database name** to +++ReportingDB+++. Under **Server**, click
     **Create new**.
 
 > ![A screenshot of a computer Description automatically
 > generated](./media/image51.png)
 
 4.  In the **Create SQL Database Server** pane, set **Server name** to
-    **sql-fabrikam-jd427**, **Location** to **Central US**,
+    +++sql-fabrikam-jd427+++, **Location** to **Central US**,
     **Authentication method** to **Use SQL authentication**, **Server
-    admin login** to **sqladminuser**, and **Password** and **Confirm
-    password** to **Fabrikam!Lab2026**. Click **OK**.
+    admin login** to +++sqladminuser+++, and **Password** and **Confirm
+    password** to +++Fabrikam!Lab2026+++. Click **OK**.
 
 > ![A screenshot of a computer screen Description automatically
 > generated](./media/image52.png)
@@ -574,8 +574,7 @@ which pauses when idle.
 > ![A screenshot of a computer Description automatically
 > generated](./media/image54.png)
 
-7.  Set **Service tier** to **General Purpose (Scalable compute and
-    storage options)**, **Compute tier** to **Serverless**, **Max
+7.  Set **Service tier** to **General Purpose (Most Budget Friendly)**, **Compute tier** to **Serverless**, **Max
     vCores** to **2** and **Auto-pause delay** to **1 hour**. Click
     **Apply**.
 
