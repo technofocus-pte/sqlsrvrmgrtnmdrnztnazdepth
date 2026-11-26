@@ -2,8 +2,6 @@
 
 ### Lab overview
 
-Lab 3 is based on **Module 2: Migration tooling and best practices**. It covers Microsoft migration tooling, destination-specific approaches, online versus offline strategies, and cutover planning. It is fully standalone: it builds its own source database and Azure target, and reuses nothing from Lab 1 or Lab 2.
-
 **Scenario.** Zava Retail sells home and lifestyle products through 140 stores and an online store that runs around the clock. Every sale, from store tills and the website, is written to one SQL Server database in a co-located datacenter whose contract ends in six months.
 
 Leadership has chosen Azure SQL Database to cut hardware and patching work for a two-person DBA team. The business has set two limits: the finance reporting copy can be offline over a weekend, but the live order system can stop taking orders for no more than 15 minutes, inside a Sunday 02:00 maintenance window.
@@ -639,7 +637,9 @@ A cutover should start only when checks say GO, not when someone feels ready. Th
 
     Simulate more application traffic, then run the check:
 
-    sqlcmd -S localhost -d ZavaOrders -E -C -W -i C:\Lab3\workload.sql Test-CutoverReadiness
+    +++sqlcmd -S localhost -d ZavaOrders -E -C -W -i C:\Lab3\workload.sql+++
+
+    +++Test-CutoverReadiness+++
 
     ![A screen shot of a computer Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image52.png)
 
@@ -723,14 +723,12 @@ A cutover should start only when checks say GO, not when someone feels ready. Th
 
 ## Clean up and review
 
-### Clean up (run after the session to stop Azure charges):
+### Clean up (Run after the session to stop Azure charges):
 
-    ```
     az group delete -n $rg --yes --no-wait
     sqlcmd -S $src -E -C -Q "ALTER DATABASE ZavaOrders SET READ_WRITE WITH ROLLBACK IMMEDIATE; DROP DATABASE ZavaOrders;"
     Set-Location C:\
     Remove-Item C:\Lab3 -Recurse -Force
-    ```
 
 ## Conclusion
 
