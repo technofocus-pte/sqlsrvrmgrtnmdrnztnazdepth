@@ -283,9 +283,6 @@ You will grant database access to an Entra group rather than to individual peopl
 
     **If you cannot create groups:** Some lab tenants do not allow learners to create groups (**+ New group** is greyed out or fails). Ask your instructor to create the group or to give you another lab user’s email address. In Task 4, replace **[SQL-Analysts]** with **[*{that user’s email}*]**. The user then appears as **EXTERNAL_USER** instead of **EXTERNAL_GROUP**.
 
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%2010/media/image43.png)
-
-
 ### Task 3: Connect to the database
 
 Use **Option A** if SSMS is installed on your lab machine; otherwise, use **Option B**. Later steps say “in your query window”; this means the tool you chose.
