@@ -491,11 +491,11 @@ You migrate the same database twice. The offline path copies a frozen snapshot; 
   
    - **If you don't know the VM password**, you can switch SQL Server to allow SQL logins and create a login just for DMS. Run this in PowerShell:
 
-     ```
-    sqlcmd -S $src -E -C -Q "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2;"
-    Restart-Service MSSQLSERVER -Force
-    sqlcmd -S $src -E -C -Q "CREATE LOGIN dms_source WITH PASSWORD = 'Zava#Src2026!', CHECK_POLICY = OFF; ALTER SERVER ROLE sysadmin ADD MEMBER dms_source;"
-     ```
+   ```
+	sqlcmd -S $src -E -C -Q "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2;"
+	Restart-Service MSSQLSERVER -Force
+	sqlcmd -S $src -E -C -Q "CREATE LOGIN dms_source WITH PASSWORD = 'Zava#Src2026!', CHECK_POLICY = OFF; ALTER SERVER ROLE sysadmin ADD MEMBER dms_source;"
+   ```
 
      Then in the wizard, choose **SQL Authentication**, with user +++dms_source+++ and password +++Zava#Src2026!+++
    
@@ -537,9 +537,9 @@ You migrate the same database twice. The offline path copies a frozen snapshot; 
 
 1. To see the status of each table, select **localhost** under **Source name** (or the status link under Migration status). **ZavaOrders** is shown in the **Source database** column.
    
-  ![](./media/image84.png)
-  
   ![](./media/image85.png)
+  
+  ![](./media/image84.png)
 
 1. When the status shows Succeeded, stop the clock in PowerShell:
 
