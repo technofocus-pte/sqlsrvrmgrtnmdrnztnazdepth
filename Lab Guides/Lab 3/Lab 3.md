@@ -6,29 +6,18 @@
 
 Leadership has chosen Azure SQL Database to cut hardware and patching work for a two-person DBA team. The business has set two limits: the finance reporting copy can be offline over a weekend, but the live order system can stop taking orders for no more than 15 minutes, inside a Sunday 02:00 maintenance window.
 
-You are the migration engineer running the pilot. Before the full migration is approved, you must prove three things: which tool and target fit the database, how offline and online migrations compare in real downtime, and that a gated cutover with a rollback path stays inside the 15-minute limit.
+You are the migration engineer running the pilot. Before the full migration is approved, you must prove three things: which tool and target fit the database, how offline and minimal-downtime migrations compare in real downtime, and that a gated cutover with a rollback path stays inside the 15-minute limit.
 
 ### Objectives
 
 By the end of the lab you will be able to:
-- Profile a SQL Server database and find blockers that affect the choice
-  of migration tool and target
 
-- Provision Azure Database Migration Service and explain how it connects
-  to on-premises sources
+- Set up a source database and Azure SQL targets
+- Evaluate and provision migration tooling
+- Run offline and minimal-downtime migrations to Azure SQL Database
+- Run readiness checks and execute a cutover
 
-- Run an offline migration with SqlPackage (BACPAC) and measure its
-  downtime
-
-- Run a minimal-downtime migration using a schema deploy, an initial
-  load and Change Tracking syncs
-
-- Apply settings specific to Azure SQL Database, including compatibility
-  level, Query Store, statistics and contained users
-
-- Validate data, gate a cutover with readiness checks, and plan a
-  rollback path
-
+[!Note] **How this lab uses Azure Database Migration Service (DMS):** for Azure SQL Database targets, DMS supports offline migrations only. In this lab, DMS runs the **offline** migration. The minimal-downtime migration uses a Change Tracking sync, which shows the seed, sync and cutover pattern that online tools such as transactional replication and Managed Instance link automate.
 
 ### **Verify the tools (1 minute).** 
 
@@ -278,7 +267,7 @@ You create ZavaOrders on the local SQL Server with 1,000 customers and 20,000 or
 
 ## Exercise 1: Evaluate and provision migration tooling
 
-You profile the source, hit a real SqlPackage export blocker and resolve it, then provision Azure Database Migration Service (DMS) to see how a managed migration service reaches an on-premises SQL Server.
+You profile the source, hit a real SqlPackage export blocker and resolve it, then provision Azure Database Migration Service (DMS) and connect it to your SQL Server through a self-hosted integration runtime, ready for the offline migration in Exercise 2.
 
 ### Task 1: Profile the source
 
@@ -323,17 +312,19 @@ You profile the source, hit a real SqlPackage export blocker and resolve it, the
     ![A screen shot of a computer Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image27.png)
 
 
-1. Rerun the export and time it:
+1. Rerun the export and note that the blocker is gone:
 
-    ```
-    $exportTime = Measure-Command { sqlpackage /Action:Export /SourceServerName:$src /SourceDatabaseName:ZavaOrders /SourceTrustServerCertificate:True /TargetFile:C:\Lab3\ZavaOrders.bacpac | Out-Host }
-    "Export took {0:N0} seconds" -f $exportTime.TotalSeconds
-    Get-Item C:\Lab3\ZavaOrders.bacpac | Select-Object Name, @{n='SizeKB';e={[int]($_.Length/1KB)}}
-    ```
+  ```
+  $exportTime = Measure-Command { sqlpackage /Action:Export /SourceServerName:$src /SourceDatabaseName:ZavaOrders /SourceTrustServerCertificate:True /TargetFile:C:\Lab3\ZavaOrders.bacpac | Out-Host }
 
-    **Expected result:** the export succeeds and the BACPAC file exists. Keep it; Exercise 2 imports it.
+  "Export took {0:N0} seconds" -f $exportTime.TotalSeconds
 
-    ![A computer screen with text on it Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image28.png)
+  Get-Item C:\Lab3\ZavaOrders.bacpac | Select-Object Name, @{n='SizeKB';e={[int]($_.Length/1KB)}}
+   ```
+
+  **Expected result:** the export succeeds and the BACPAC file exists. The database is now free of blockers for Azure SQL Database, so any tool, including DMS, can migrate it.
+
+  ![](./media/image60.png)
 
 
 ### Task 3: Provision Azure Database Migration Service
@@ -379,8 +370,55 @@ SqlPackage runs on your VM and connects to both ends directly. DMS is an Azure s
 
     ![A screenshot of a computer Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image33.png)
 
-    In production you would install the self-hosted integration runtime on a machine that can reach SQL Server, register it with one of these keys, then start migrations from the portal or CLI. DMS supports offline migrations to Azure SQL Database, and online or offline migrations to SQL Managed Instance and SQL Server on Azure VMs. That limit is why Exercise 2 builds the online pattern to Azure SQL Database by hand.
+1.	Install the self-hosted integration runtime. On the DMS resource, under **Settings**, select **Integration runtime**. Select Configure integration runtime.
 
+   ![](./media/image61.png)
+   
+3.	Then, select the **Download and install integration runtime** link. It opens the download page in the VM's browser.
+
+   ![](./media/image62.png)
+  	
+5.	**Download** the integration runtime installer and run it on the lab VM, accepting the defaults. When installation finishes, **Microsoft Integration Runtime Configuration Manager** opens automatically.
+
+   ![](./media/image63.png)
+
+  ![](./media/image64.png)
+   
+7.	Back in the portal, in the **Authentication key** table, copy one of the keys.
+
+   ![](./media/image65.png)
+  	
+9.	Paste it into the Configuratio¬¬n Manager, wait for the green check that shows the key is valid, then select **Register**. When registration completes, close the Configuration Manager.
+
+   ![](./media/image66.png)
+  
+  ![](./media/image67.png)
+  
+  ![](./media/image68.png)
+    
+11.	Confirm the runtime is connected. In the portal, go to **Settings > Integration runtime** and select **Refresh** until your VM appears as a node; this can take several minutes. 
+
+  **You can also check from PowerShell:** 
+  +++az datamigration sql-service show --resource-group $rg --sql-migration-service-name $dms --query integrationRuntimeState -o tsv+++
+  
+  **Expected result:** Online.
+  
+  ![](./media/image69.png)
+
+12.	Let the integration runtime connect to SQL Server over TCP. SQL Server Developer edition installs with TCP/IP turned off, and the runtime can't connect without it. 
+    **Run:**
+   	```
+    $key = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server" | Where-Object { $_.PSChildName -like 'MSSQL*.MSSQLSERVER' } | Select-Object -First 1
+    Set-ItemProperty "$($key.PSPath)\MSSQLServer\SuperSocketNetLib\Tcp" -Name Enabled -Value 1
+    Restart-Service MSSQLSERVER -Force
+    sqlcmd -S tcp:localhost -E -C -W -Q "SELECT 'TCP OK' AS Status;"
+    ```
+    
+    **Expected result:** TCP OK.
+
+  ![](./media/image70.png)
+
+  DMS supports offline migrations to Azure SQL Database, and online or offline migrations to SQL Managed Instance and SQL Server on Azure VMs. That's why Exercise 2   uses DMS for the offline migration, and a Change Tracking sync for the minimal-downtime migration.
 
 ## Exercise 2: Run offline and online migrations to Azure SQL Database
 
@@ -410,26 +448,119 @@ You migrate the same database twice. The offline path copies a frozen snapshot; 
 
     ![A computer screen with blue text Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image36.png)
 
-1. Import the BACPAC from Exercise 1 and time it:
+1. Print the connection details you'll enter in the **DMS wizard**:
 
-    ```
-    $importTime = Measure-Command { sqlpackage /Action:Import /SourceFile:C:\Lab3\ZavaOrders.bacpac /TargetServerName:$azHost /TargetDatabaseName:ZavaOrders_Offline /TargetUser:$admin /TargetPassword:$sqlPass | Out-Host }
-    "Import took {0:N0} seconds" -f $importTime.TotalSeconds
-    "Offline downtime = export + import = {0:N0} seconds" -f ($exportTime.TotalSeconds + $importTime.TotalSeconds)
-    ```
+  ```
+  "Source server: localhost   Windows user: $env:COMPUTERNAME\$env:USERNAME"
+  "Target server: $azHost   SQL user: $admin"
+  ```
+	
+  ![](./media/image71.png)
 
-    ![A screenshot of a computer program Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image37.png)
+1. In the Azure portal, open your DMS resource. On the **Overview** pane, select **+ New Migration**.
+  
+   ![](./media/image72.png)
+
+1. Under Select **new migration scenario**, set **Source server type** to **SQL Server**, **Target server type** to **Azure SQL Database**, and **Migration mode** to **Offline**. Choose **Select**. The **Azure SQL Database Offline Migration Wizard** opens.
+
+   ![](./media/image73.png)
+
+1. On the **Source details** tab, enter the details for your **source SQL Server**(it runs on this lab VM, not in Azure), then select **Next: Connect to source SQL Server.**
+
+  |Field	|What to select or enter|
+  |-------|-------|
+  |Is your source SQL Server instance tracked in Azure? |No (already selected)	|
+  |Source Infrastructure Type |Virtual Machine, since the source runs on your lab VM. If that option isn't in the list, choose Physical Server. This is only a label for tracking and doesn't affect the migration.	|
+  |Subscription |Leave your lab subscription (already selected)	|
+  |Resource group |Your lab resource group, rg-lab3- (already selected)	|
+  |Location |Central India, to match the rest of the lab	|
+  |SQL Server Instance Name |Your VM name plus the instance name, as the hint below the field suggests. Get it from PowerShell (below)	|
+
+   To get the **instance name**, run this in your **PowerShell** window:
+  +++"$env:COMPUTERNAME-MSSQLSERVER"+++
+
+   ![](./media/image74.png)
+   
+   ![](./media/image75.png)
+
+1. On the **Connect to source SQL Server** tab, enter:
+   
+   - **Source server name:** localhost
+   - **Authentication type:** SQL Authentication
+   - **User name:**
+  
+   - **If you don't know the VM password**, you can switch SQL Server to allow SQL logins and create a login just for DMS. Run this in PowerShell:
+
+     ```
+    sqlcmd -S $src -E -C -Q "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2;"
+    Restart-Service MSSQLSERVER -Force
+    sqlcmd -S $src -E -C -Q "CREATE LOGIN dms_source WITH PASSWORD = 'Zava#Src2026!', CHECK_POLICY = OFF; ALTER SERVER ROLE sysadmin ADD MEMBER dms_source;"
+     ```
+
+     Then in the wizard, choose **SQL Authentication**, with user +++dms_source+++ and password +++Zava#Src2026!+++
+   
+    - Check **Trust server certificate** if the option is shown
+
+      Then select **Next: Select databases for migration**.
+
+  ![](./media/image76.png)
+
+1. On the **Select databases for migration** tab, check **ZavaOrders**. The list can take a moment to fill. Select **Next: Connect to target Azure SQL Database**.
+
+   ![](./media/image77.png)
+
+1. On the **Connect to target Azure SQL Database** tab, select your subscription, resource group and SQL server (the target server printed in step 4). Set **Authentication type** to **SQL Authentication**, enter +++labadmin+++ and your SQL admin password as +++Zava#Lab2026!+++, then select **Next: Map source and target databases.**
+
+   ![](./media/image78.png)
+
+1. On the **Map source and target databases** tab, map **ZavaOrders** to **ZavaOrders_Offline**.
+
+   ![](./media/image79.png)
+
+1. Check **Migrate Missing schema**. The target database is empty, so DMS must create the schema before copying data. Then select **Select all tables**, followed by **Next: Database migration summary**.
+
+   ![](./media/image80.png)
+
+1. In PowerShell, start the downtime clock:
+   
+   +++$dmsStart = Get-Date+++
+
+   ![](./media/image81.png)
+
+1. Back in the portal, on the **Database migration summary** tab, review the details and select **Start migration**. The portal returns you to the DMS dashboard.
+
+   ![](./media/image82.png)
+
+1. On the **Overview** pane of your DMS resource, select **Monitor migrations**. On the **Migrations** tab, select **Refresh** to update the status. It moves through **Creating, Preparing for copy, Copying, Copy finished and Rebuilding indexes**, ending at **Succeeded**. 
+
+   ![](./media/image83.png)
+
+1. To see the status of each table, select **localhost** under **Source name** (or the status link under Migration status). **ZavaOrders** is shown in the **Source database** column.
+   
+  ![](./media/image84.png)
+  
+  ![](./media/image85.png)
+
+1. When the status shows Succeeded, stop the clock in PowerShell:
+
+  ``` 
+  $dmsTime = (Get-Date) - $dmsStart
+  "Offline (DMS) downtime: {0:N0} seconds" -f $dmsTime.TotalSeconds
+  ```
+
+  ![](./media/image86.png)
 
 1. Validate the copy:
+   
+  ++++sqlcmd -S $azHost -d ZavaOrders_Offline -U $admin -P $sqlPass -W -Q "SELECT (SELECT COUNT(*) FROM dbo.Customers) AS Customers, (SELECT COUNT(*) FROM dbo.Orders) AS Orders;"+++
 
-    `sqlcmd -S $azHost -d ZavaOrders_Offline -U $admin -P $sqlPass -Q "SELECT COUNT(*) AS Orders FROM dbo.Orders;"`
+  **Expected result:** Customers = 1000 and Orders = 20000. Record the offline downtime. In production the source would be read-only for that whole window, and it grows with data size. 
+  
+  ![](./media/image87.png)
 
-    ![A computer screen with text on it Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image38.png)
+[!Note] **Best practice**: DMS skips tables with no rows, and computed columns aren't migrated. Neither applies to ZavaOrders, but check for both before migrating a real database. In production, use a least-privileged target login with the server roles listed in the DMS documentation instead of the server admin.
 
-    **Expected result:** Orders = 20000. Record the offline downtime. In production the source would be read-only for that whole window, and it grows with data size.
-
-
-### Task 2: Online (minimal-downtime) migration
+### Task 2: Minimal-downtime migration with Change Tracking
 
 1. Deploy the schema only (no data) to the online target. Do this before enabling Change Tracking, so the dacpac carries no tracking settings that Azure SQL Database would reject:
 
@@ -542,7 +673,7 @@ You migrate the same database twice. The offline path copies a frozen snapshot; 
 
 ### Task 3: Apply destination-specific settings for Azure SQL Database
 
-Azure SQL Database is scoped to the database: there is no SQL Agent, apps should not depend on server logins, and Query Store is on by default. Prepare the online target for go-live.
+Azure SQL Database is scoped to the database: there is no SQL Agent, apps should not depend on server logins, and Query Store is on by default. Prepare the minimal-downtime target for go-live.
 
 1. Compare compatibility levels on source and target:
 
@@ -703,22 +834,21 @@ A cutover should start only when checks say GO, not when someone feels ready. Th
 
     ```
     $downtime = (Get-Date) - $freeze
-    "Online cutover downtime: {0:N0} seconds" -f $downtime.TotalSeconds
-    "Offline downtime (Exercise 2): {0:N0} seconds" -f ($exportTime.TotalSeconds + $importTime.TotalSeconds)
+  "Minimal-downtime cutover: {0:N0} seconds" -f $downtime.TotalSeconds
+  "Offline downtime (DMS, Exercise 2): {0:N0} seconds" -f $dmsTime.TotalSeconds
     ```
 
-    Record both numbers. The online downtime covers only the last few seconds of changes; the offline downtime covers the whole database. On a 400 GB database, that difference is minutes versus hours.
+  Record both numbers. The minimal-downtime cutover covers only the last few seconds of changes; the offline downtime covers the whole database. On a 400 GB database, that difference is minutes versus hours.
 
-    ![A screen shot of a computer code Description automatically generated](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image58.png)
+  ![](./media/image88.png)
 
 1. **Rollback drill (run only if a go/no-go check failed):**
 
-    `sqlcmd -S localhost -E -C -Q "ALTER DATABASE ZavaOrders SET READ_WRITE WITH ROLLBACK IMMEDIATE;"`
+  +++sqlcmd -S localhost -E -C -Q "ALTER DATABASE ZavaOrders SET READ_WRITE WITH ROLLBACK IMMEDIATE;"+++
+  
+  If all checks passed, leave the source read-only. It is now your fallback copy until the migration is signed off. 
 
-    If all checks passed, leave the source read-only. It is now your fallback copy, as in the T+7 days row.
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/sqlsrvrmgrtnmdrnztnazdepth/refs/heads/main/Lab%20Guides/Lab%203/media/image59.png)
-
+  ![](./media/image89.png)
 
 ## Clean up and review
 
