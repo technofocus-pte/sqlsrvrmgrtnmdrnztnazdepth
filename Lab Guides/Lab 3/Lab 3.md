@@ -73,9 +73,9 @@ By the end of the lab you will be able to:
 **Keep one PowerShell window open for the whole lab.** Later steps reuse variables set in Exercise 0. If you close the window, rerun Exercise 0, Task 1 (variables only) before continuing.
 
 
-## Exercise 0: Set up the source and target
+## Exercise 0: Set up the source database and Azure SQL targets
 
-You create ZavaOrders on the local SQL Server with 1,000 customers and 20,000 orders, then start deploying two empty Azure SQL databases: one for the offline migration and one for the online migration.
+You create ZavaOrders on the local SQL Server with 1,000 customers and 20,000 orders, then start deploying two empty Azure SQL databases: one for the offline migration and one for the minimal-downtime migration.
 
 ### Task 1: Set lab variables
 
